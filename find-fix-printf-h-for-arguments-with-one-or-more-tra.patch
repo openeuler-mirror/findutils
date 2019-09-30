@@ -1,0 +1,250 @@
+From 2a6129bfccec9f23a50f037e187f85c4d000bc87 Mon Sep 17 00:00:00 2001
+From: Bernhard Voelker <mail@bernhard-voelker.de>
+Date: Mon, 20 Feb 2017 18:53:48 +0100
+Subject: [PATCH 098/224] find: fix -printf '%h' for arguments with one or more
+ trailing slashes
+
+Previously, find would output the pathname name for the '%h' format
+when that was passed with a trailing slash:
+
+  $ mkdir foo
+  $ find foo/ -printf '%h/%f\n'
+  foo/foo/
+
+* find/print.c (do_fprintf -> 'h'): Strip trailing slashes, i.e. any
+number of directory separators, unless this is the root "/" directory.
+* find/testsuite/find.gnu/printf-h.exp: Enhance test with various
+combinations of "/", "./", "foo/", "./foo", "./foolink/", etc.
+* find/testsuite/find.gnu/printf-h.xo: Add the expected output for the
+above new test cases.
+* NEWS: Mention the fix.
+
+Bug introduced in commit FINDUTILS_4_2_18-1-6-g0fd15a4.
+
+Reported by	Tavian Barnes <tavianator@gmail.com> in
+  https://savannah.gnu.org/bugs/?50259
+---
+ NEWS                                 |  8 ++-
+ find/print.c                         | 21 +++++--
+ find/testsuite/find.gnu/printf-h.exp | 94 ++++++++++++++++++++++++++--
+ find/testsuite/find.gnu/printf-h.xo  | 70 ++++++++++++++++++++-
+ 4 files changed, 181 insertions(+), 12 deletions(-)
+
+diff --git a/find/print.c b/find/print.c
+index 20351572..db6155c9 100644
+--- a/find/print.c
++++ b/find/print.c
+@@ -965,8 +965,18 @@ do_fprintf (struct format_val *dest,
+         case 'h':               /* leading directories part of path */
+           /* sanitised */
+           {
+-            cp = strrchr (pathname, '/');
+-            if (cp == NULL)     /* No leading directories. */
++            char *pname = strdup (pathname);
++
++            /* Remove trailing slashes - unless it's the root '/' directory.  */
++            char *s = pname + strlen (pname) -1;
++            for ( ; pname <= s; s--)
++              if (*s != '/')
++                break;
++            if (pname < s && *(s+1) == '/')
++              *(s+1) = '\0';
++
++            s = strrchr (pname, '/');
++            if (s == NULL)     /* No leading directories. */
+               {
+                 /* If there is no slash in the pathname, we still
+                  * print the string because it contains characters
+@@ -976,11 +986,10 @@ do_fprintf (struct format_val *dest,
+               }
+             else
+               {
+-                char *s = strdup (pathname);
+-                s[cp - pathname] = 0;
+-                checked_print_quoted (dest, segment->text, s);
+-                free (s);
++                *s = '\0';
++                checked_print_quoted (dest, segment->text, pname);
+               }
++            free (pname);
+           }
+           break;
+ 
+diff --git a/find/testsuite/find.gnu/printf-h.exp b/find/testsuite/find.gnu/printf-h.exp
+index fb0187cc..094a37b5 100644
+--- a/find/testsuite/find.gnu/printf-h.exp
++++ b/find/testsuite/find.gnu/printf-h.exp
+@@ -1,5 +1,91 @@
+ # Test case for Savannah bug ID #12085.
+-exec rm -rf tmp
+-exec touch tmp
+-find_start p {tmp  -printf "RESULT: %h %f\n" }
+-exec rm -rf tmp
++exec rm -rf foo
++exec mkdir foo foo/bar
++exec ln -s foo foolink
++#
++# Create the combinations with:
++# $ printf '%s \\\n' {,./,.//}{/,.,foo,foolink,foo/bar}{,/,//,/.,//.} | sort -u
++#
++# Manual check against installed version:
++# $ for opt in '' -H -L -P ; do
++#     printf "\n=== Differences for option: '%s' ===\n" "$opt"
++#     diff -u0 \
++#       <( /usr/bin/find $opt {,./,.//}{/,.,foo,foolink,foo/bar}{,/,//,/.,//.} \
++#                     -maxdepth 1 -printf "%h/%f,%%p=%p,%%h='%h',%%f='%f'\n" ) \
++#       <(        ./find $opt {,./,.//}{/,.,foo,foolink,foo/bar}{,/,//,/.,//.} \
++#                     -maxdepth 1 -printf "%h/%f,%%p=%p,%%h='%h',%%f='%f'\n" )
++#     done | column -t -s,
++
++find_start p {\
++/ \
++// \
++/// \
++///. \
++//. \
++. \
++./ \
++.// \
++./// \
++.//// \
++.///// \
++./////. \
++.////. \
++.///. \
++.//. \
++.//./ \
++.//.// \
++.//.//. \
++.//./. \
++./. \
++././ \
++./.// \
++././/. \
++././. \
++.//foo \
++.//foo/ \
++.//foo// \
++.//foo//. \
++.//foo/. \
++./foo \
++./foo/ \
++./foo// \
++./foo//. \
++./foo/. \
++foo \
++foo/ \
++foo// \
++foo//. \
++foo/. \
++.//foo/bar \
++.//foo/bar/ \
++.//foo/bar// \
++.//foo/bar//. \
++.//foo/bar/. \
++./foo/bar \
++./foo/bar/ \
++./foo/bar// \
++./foo/bar//. \
++./foo/bar/. \
++foo/bar \
++foo/bar/ \
++foo/bar// \
++foo/bar//. \
++foo/bar/. \
++.//foolink \
++.//foolink/ \
++.//foolink// \
++.//foolink//. \
++.//foolink/. \
++./foolink \
++./foolink/ \
++./foolink// \
++./foolink//. \
++./foolink/. \
++foolink \
++foolink/ \
++foolink// \
++foolink//. \
++foolink/. \
++-maxdepth 0 -printf "%p,%h,%f\n" }
++
++exec rm -rf foo foolink
+diff --git a/find/testsuite/find.gnu/printf-h.xo b/find/testsuite/find.gnu/printf-h.xo
+index dc6ce01e..0ed6ad9d 100644
+--- a/find/testsuite/find.gnu/printf-h.xo
++++ b/find/testsuite/find.gnu/printf-h.xo
+@@ -1 +1,69 @@
+-RESULT: . tmp
++/,,/
++//,/,/
++///,//,/
++///.,//,.
++//.,/,.
++.,.,.
++./,.,./
++.//,./,./
++.///,.//,./
++.////,.///,./
++./////,.////,./
++./////.,.////,.
++.////.,.///,.
++.///.,.//,.
++.//.,./,.
++.//./,./,./
++.//.//,./,./
++.//.//.,.//./,.
++.//./.,.//.,.
++./.,.,.
++././,.,./
++././/,.,./
++././/.,././,.
++././.,./.,.
++.//foo/bar,.//foo,bar
++.//foo/bar/,.//foo,bar/
++.//foo/bar//,.//foo,bar/
++.//foo/bar//.,.//foo/bar/,.
++.//foo/bar/.,.//foo/bar,.
++./foo/bar,./foo,bar
++./foo/bar/,./foo,bar/
++./foo/bar//,./foo,bar/
++./foo/bar//.,./foo/bar/,.
++./foo/bar/.,./foo/bar,.
++foo/bar,foo,bar
++foo/bar/,foo,bar/
++foo/bar//,foo,bar/
++foo/bar//.,foo/bar/,.
++foo/bar/.,foo/bar,.
++.//foo,./,foo
++.//foo/,./,foo/
++.//foo//,./,foo/
++.//foo//.,.//foo/,.
++.//foo/.,.//foo,.
++./foo,.,foo
++./foo/,.,foo/
++./foo//,.,foo/
++./foo//.,./foo/,.
++./foo/.,./foo,.
++foo,.,foo
++foo/,.,foo/
++foo//,.,foo/
++foo//.,foo/,.
++foo/.,foo,.
++.//foolink,./,foolink
++.//foolink/,./,foolink/
++.//foolink//,./,foolink/
++.//foolink//.,.//foolink/,.
++.//foolink/.,.//foolink,.
++./foolink,.,foolink
++./foolink/,.,foolink/
++./foolink//,.,foolink/
++./foolink//.,./foolink/,.
++./foolink/.,./foolink,.
++foolink,.,foolink
++foolink/,.,foolink/
++foolink//,.,foolink/
++foolink//.,foolink/,.
++foolink/.,foolink,.
+-- 
+2.19.1
+

@@ -1,0 +1,47 @@
+From 9530e31f6d4febf8ff08f931f70b40d41603ef8d Mon Sep 17 00:00:00 2001
+From: Assaf Gordon <assafgordon@gmail.com>
+Date: Wed, 16 Aug 2017 14:09:17 -0600
+Subject: [PATCH 114/224] find: give helpful hint for unquoted patterns errors
+
+Try to detect cases where the user provided an unquoted shell-glob
+pattern (which was expanded by the shell before calling find(1),
+resulting in an invalid usage).
+
+  $ touch a.txt b.txt c.txt
+  $ find -name *.txt
+  find: paths must precede expression: `b.txt'
+  find: possible unquoted pattern after predicate `-name'?
+
+Continuation of
+   https://savannah.gnu.org/bugs/?51711
+   https://lists.gnu.org/archive/html/bug-findutils/2017-08/msg00000.html
+   https://git.sv.gnu.org/cgit/findutils.git/commit/?id=50a7c5d1f572
+
+* find/tree.c (build_expression_tree): If the offending argument is an
+existing file, print a hint with the last (valid) predicate.
+---
+ find/tree.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/find/tree.c b/find/tree.c
+index ee466ea6..cc7772d2 100644
+--- a/find/tree.c
++++ b/find/tree.c
+@@ -1275,7 +1275,13 @@ build_expression_tree (int argc, char *argv[], int end_of_leading_options)
+     {
+       state.already_issued_stat_error_msg = false;
+       if (!looks_like_expression (argv[i], false))
+-	error (EXIT_FAILURE, 0, _("paths must precede expression: `%s'"), argv[i]);
++        {
++          error (0, 0, _("paths must precede expression: `%s'"), argv[i]);
++          if (access(argv[i], F_OK)==0)
++            error (0, 0, _("possible unquoted pattern after predicate `%s'?"),
++                   last_pred->p_name);
++          exit (EXIT_FAILURE);
++        }
+ 
+       predicate_name = argv[i];
+       parse_entry = find_parser (predicate_name);
+-- 
+2.19.1
+

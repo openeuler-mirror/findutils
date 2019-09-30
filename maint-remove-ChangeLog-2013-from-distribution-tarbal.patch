@@ -1,0 +1,31 @@
+From f70469712165524b6ba92bf5dc60ad9be70546cb Mon Sep 17 00:00:00 2001
+From: Bernhard Voelker <mail@bernhard-voelker.de>
+Date: Tue, 1 Nov 2016 16:34:31 +0100
+Subject: [PATCH 078/224] maint: remove ChangeLog-2013 from distribution
+ tarball
+
+* Makefile.am (EXTRA_DIST): Remove ChangeLog-2013, as its content is
+shipped in the generated ChangeLog file.
+
+Reported by Steve in
+http://lists.gnu.org/archive/html/bug-findutils/2016-10/msg00000.html
+---
+ Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 410ee3d5..c31e7f03 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS=gnits
+ # readme-alpha
+ AM_CFLAGS = $(WARN_CFLAGS)
+ 
+-EXTRA_DIST = COPYING ChangeLog ChangeLog-2013 TODO config.h.in stamp-h.in \
++EXTRA_DIST = COPYING ChangeLog TODO config.h.in stamp-h.in \
+ 		THANKS bootstrap \
+ 		tool-versions.txt README-hacking
+ DISTCLEANFILES = tool-versions.txt
+-- 
+2.19.1
+

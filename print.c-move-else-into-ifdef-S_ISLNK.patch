@@ -1,0 +1,31 @@
+From 88fc3a464476721c3f3631d56d441dff7c9e2479 Mon Sep 17 00:00:00 2001
+From: Bernhard Voelker <mail@bernhard-voelker.de>
+Date: Fri, 20 Jul 2018 10:27:56 +0200
+Subject: [PATCH 183/224] print.c: move 'else' into #ifdef S_ISLNK
+
+* find/print.c (do_fprintf): Move the 'else' statment into the #ifdef'ed
+block to avoid compilation failure on systems without S_ISLNK (although
+it seems nobody tried to build on such a platform since 2005).
+
+Bug introduced in commit 'FINDUTILS_4_2_23-1-63-g238d9547'.
+---
+ find/print.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/find/print.c b/find/print.c
+index 545df96a..24bd9692 100644
+--- a/find/print.c
++++ b/find/print.c
+@@ -1205,8 +1205,8 @@ do_fprintf (struct format_val *dest,
+                 checked_fprintf (dest, segment->text,
+                                  mode_to_filetype (sbuf.st_mode & S_IFMT));
+               }
+-#endif /* S_ISLNK */
+             else
++#endif /* S_ISLNK */
+               {
+                 checked_fprintf (dest, segment->text,
+                                  mode_to_filetype (stat_buf->st_mode & S_IFMT));
+-- 
+2.19.1
+

@@ -1,0 +1,49 @@
+From 22ff99e150faa82980361e577cff643cc17e7fac Mon Sep 17 00:00:00 2001
+From: Bernhard Voelker <mail@bernhard-voelker.de>
+Date: Sun, 8 Jul 2018 00:17:27 +0200
+Subject: [PATCH 176/224] find: process unreadable directories with -depth
+
+* find/ftsfind.c (consider_visiting): Split the FTS_ERR and FTS_DNR
+cases to be able to continue processing that entry in the latter case
+(unreadable directory) when the -depth option is given.
+* NEWS (Bug Fixes): Mention the fix.
+
+Reported by Tavian Barnes in https://savannah.gnu.org/bugs/?54171.
+---
+ NEWS           |  4 ++++
+ find/ftsfind.c | 15 +++++++++++++--
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/find/ftsfind.c b/find/ftsfind.c
+index 0e2aca33..607ea8d3 100644
+--- a/find/ftsfind.c
++++ b/find/ftsfind.c
+@@ -342,12 +342,23 @@ consider_visiting (FTS *p, FTSENT *ent)
+   statbuf.st_ino = ent->fts_statp->st_ino;
+ 
+   /* Cope with various error conditions. */
+-  if (ent->fts_info == FTS_ERR
+-      || ent->fts_info == FTS_DNR)
++  if (ent->fts_info == FTS_ERR)
+     {
+       nonfatal_target_file_error (ent->fts_errno, ent->fts_path);
+       return;
+     }
++  if (ent->fts_info == FTS_DNR)
++    {
++      nonfatal_target_file_error (ent->fts_errno, ent->fts_path);
++      if (options.do_dir_first)
++	{
++	  /* Return for unreadable directories without -depth.
++	   * With -depth, the directory itself has to be processed, yet the
++	   * error message above has to be output.
++	   */
++	  return;
++	}
++    }
+   else if (ent->fts_info == FTS_DC)
+     {
+       issue_loop_warning (ent);
+-- 
+2.19.1
+

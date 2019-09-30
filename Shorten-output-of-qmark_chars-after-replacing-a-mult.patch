@@ -1,0 +1,30 @@
+From bb51d3581d52890cd1c2b0e5ee919c00b0ba9eb5 Mon Sep 17 00:00:00 2001
+From: James Youngman <jay@gnu.org>
+Date: Thu, 5 Jul 2018 13:34:06 +0100
+Subject: [PATCH 175/224] Shorten output of qmark_chars after replacing a
+ multibyte characer.
+
+When qmark_chars() replaces a multibyte character with a single
+character, this reduces the length of the string.  When this happens,
+terminate the now-shorter string at the new length.
+
+This is simple workaround for bug http://savannah.gnu.org/bugs/?54236.
+---
+ lib/printquoted.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/lib/printquoted.c b/lib/printquoted.c
+index 5a31664b..14665c95 100644
+--- a/lib/printquoted.c
++++ b/lib/printquoted.c
+@@ -62,6 +62,7 @@ print_quoted (FILE *fp,
+ 
+       /* Replace any remaining funny characters with '?'. */
+       len = qmark_chars (buf, len);
++      buf[len] = 0;
+ 
+       rv = fprintf (fp, format, buf);	/* Print the quoted version */
+       if (buf != smallbuf)
+-- 
+2.19.1
+

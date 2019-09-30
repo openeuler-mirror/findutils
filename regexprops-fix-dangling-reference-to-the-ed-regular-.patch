@@ -1,0 +1,970 @@
+From e2c673cbcdc325a3a2e9dd02169bb4a42c61bc48 Mon Sep 17 00:00:00 2001
+From: James Youngman <jay@gnu.org>
+Date: Mon, 13 Nov 2017 22:37:55 +0000
+Subject: [PATCH 144/224] regexprops: fix dangling reference to the `ed'
+ regular expression dialect.
+
+* lib/regextype.c (regex_map): Permute the entries to list POSIX
+dialects before other ones, so that we don't end up with a
+dangling reference to `ed' regular expressions when
+context=findutils.  Remove trailing white space from the output.
+* doc/regexprops.texi: Regenerate this file, so that we no longer
+have a dangling reference to the `ed' dialect.
+* doc/find.texi (Regular Expressions): Point out the difference
+between Emacs regular expressions and findutils regular
+expressions: in findutils "." will match newline.
+* find/find.1: Likewise.
+* locate/locate.1: Likewise.  Also document the --regextype option.
+---
+ doc/find.texi       |   7 +-
+ doc/regexprops.texi | 376 ++++++++++++++++++++++++++++----------------
+ find/find.1         |   4 +-
+ lib/regexprops.c    |  74 ++++-----
+ lib/regextype.c     |  14 +-
+ locate/locate.1     |  14 +-
+ 6 files changed, 306 insertions(+), 183 deletions(-)
+
+diff --git a/doc/find.texi b/doc/find.texi
+index 2731f0af..5573d29b 100644
+--- a/doc/find.texi
++++ b/doc/find.texi
+@@ -3917,8 +3917,11 @@ your locale setup affects the interpretation of regular expressions.
+ 
+ There are also several different types of regular expression, and
+ these are interpreted differently.  Normally, the type of regular
+-expression used by @code{find} and @code{locate} is the same as is
+-used in GNU Emacs.  Both programs provide an option which allows you
++expression used by @code{find} and @code{locate} is almost identical to
++that used in GNU Emacs.  The single difference is that in @code{find}
++and @code{locate}, a @samp{.} will match a newline character.
++
++Both @code{find} and @code{locate} provide an option which allows you
+ to select an alternative regular expression syntax; for @code{find}
+ this is the @samp{-regextype} option, and for @code{locate} this is
+ the @samp{--regextype} option.
+diff --git a/doc/regexprops.texi b/doc/regexprops.texi
+index 8fee88ae..0229460e 100644
+--- a/doc/regexprops.texi
++++ b/doc/regexprops.texi
+@@ -11,15 +11,15 @@
+ 
+ @menu
+ * findutils-default regular expression syntax::
++* posix-awk regular expression syntax::
++* posix-basic regular expression syntax::
++* posix-egrep regular expression syntax::
++* posix-extended regular expression syntax::
+ * awk regular expression syntax::
+ * egrep regular expression syntax::
+ * emacs regular expression syntax::
+ * gnu-awk regular expression syntax::
+ * grep regular expression syntax::
+-* posix-awk regular expression syntax::
+-* posix-basic regular expression syntax::
+-* posix-egrep regular expression syntax::
+-* posix-extended regular expression syntax::
+ @end menu
+ 
+ @node findutils-default regular expression syntax
+@@ -44,6 +44,7 @@ matches a @samp{?}.
+ 
+ Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are ignored.  Within square brackets, @samp{\} is taken literally.  Character classes are not supported, so for example you would need to use @samp{[0-9]} instead of @samp{[[:digit:]]}.
+ 
++
+ GNU extensions are supported:
+ @enumerate
+ 
+@@ -73,11 +74,10 @@ The alternation operator is @samp{\|}.
+ The character @samp{^} only represents the beginning of a string when it appears:
+ @enumerate
+ 
+-@item
+-At the beginning of a regular expression
++@item At the beginning of a regular expression
++
++@item After an open-group, signified by @samp{\(}
+ 
+-@item After an open-group, signified by
+-@samp{\(}
+ 
+ @item After the alternation operator @samp{\|}
+ 
+@@ -89,8 +89,8 @@ The character @samp{$} only represents the end of a string when it appears:
+ 
+ @item At the end of a regular expression
+ 
+-@item Before a close-group, signified by
+-@samp{\)}
++@item Before a close-group, signified by @samp{\)}
++
+ @item Before the alternation operator @samp{\|}
+ 
+ @end enumerate
+@@ -101,8 +101,8 @@ The character @samp{$} only represents the end of a string when it appears:
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{\(}
++@item After an open-group, signified by @samp{\(}
++
+ @item After the alternation operator @samp{\|}
+ 
+ @end enumerate
+@@ -113,8 +113,8 @@ The character @samp{$} only represents the end of a string when it appears:
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node awk regular expression syntax
+-@subsection @samp{awk} regular expression syntax
++@node posix-awk regular expression syntax
++@subsection @samp{posix-awk} regular expression syntax
+ 
+ 
+ The character @samp{.} matches any single character except the null character.
+@@ -135,53 +135,57 @@ matches a @samp{?}.
+ 
+ Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} can be used to quote the following character.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
+ 
++
+ GNU extensions are not supported and so @samp{\w}, @samp{\W}, @samp{\<}, @samp{\>}, @samp{\b}, @samp{\B}, @samp{\`}, and @samp{\'} match @samp{w}, @samp{W}, @samp{<}, @samp{>}, @samp{b}, @samp{B}, @samp{`}, and @samp{'} respectively.
+ 
+-Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit matches that digit.
++
++Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{(}.
+ 
+ The alternation operator is @samp{|}.
+ 
+ The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
+ 
+-@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
++
++@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except the following places, where they are not allowed:
+ @enumerate
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{(}
++@item After an open-group, signified by @samp{(}
++
+ @item After the alternation operator @samp{|}
+ 
+ @end enumerate
+ 
+ 
+-
++Intervals are specified by @samp{@{} and @samp{@}}.
++Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node egrep regular expression syntax
+-@subsection @samp{egrep} regular expression syntax
++@node posix-basic regular expression syntax
++@subsection @samp{posix-basic} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character.
++The character @samp{.} matches any single character except the null character.
+ 
+ 
+ @table @samp
+ 
+-@item +
+-indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
+-@item ?
+-indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
+ @item \+
+-matches a @samp{+}
++indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
+ @item \?
+-matches a @samp{?}.
++indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
++@item + and ?
++match themselves.
++
+ @end table
+ 
+ 
+ Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} is taken literally.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
+ 
++
+ GNU extensions are supported:
+ @enumerate
+ 
+@@ -204,24 +208,59 @@ GNU extensions are supported:
+ @end enumerate
+ 
+ 
+-Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{(}.
++Grouping is performed with backslashes followed by parentheses @samp{\(}, @samp{\)}.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{\(}.
+ 
+-The alternation operator is @samp{|}.
++The alternation operator is @samp{\|}.
+ 
+-The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
++The character @samp{^} only represents the beginning of a string when it appears:
++@enumerate
+ 
+-The characters @samp{*}, @samp{+} and @samp{?} are special anywhere in a regular expression.
++@item At the beginning of a regular expression
++
++@item After an open-group, signified by @samp{\(}
++
++
++@item After the alternation operator @samp{\|}
++
++@end enumerate
++
++
++The character @samp{$} only represents the end of a string when it appears:
++@enumerate
++
++@item At the end of a regular expression
++
++@item Before a close-group, signified by @samp{\)}
++
++@item Before the alternation operator @samp{\|}
++
++@end enumerate
++
++
++@samp{\*}, @samp{\+} and @samp{\?} are special at any point in a regular expression except:
++@enumerate
++
++@item At the beginning of a regular expression
++
++@item After an open-group, signified by @samp{\(}
++
++@item After the alternation operator @samp{\|}
++
++@end enumerate
++
++
++Intervals are specified by @samp{\@{} and @samp{\@}}.
++Invalid intervals such as @samp{a\@{1z} are not accepted.
+ 
+-Intervals are specified by @samp{@{} and @samp{@}}.  Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node emacs regular expression syntax
+-@subsection @samp{emacs} regular expression syntax
++@node posix-egrep regular expression syntax
++@subsection @samp{posix-egrep} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character except newline.
++The character @samp{.} matches any single character.
+ 
+ 
+ @table @samp
+@@ -237,7 +276,8 @@ matches a @samp{?}.
+ @end table
+ 
+ 
+-Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are ignored.  Within square brackets, @samp{\} is taken literally.  Character classes are not supported, so for example you would need to use @samp{[0-9]} instead of @samp{[[:digit:]]}.
++Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} is taken literally.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
++
+ 
+ GNU extensions are supported:
+ @enumerate
+@@ -261,58 +301,27 @@ GNU extensions are supported:
+ @end enumerate
+ 
+ 
+-Grouping is performed with backslashes followed by parentheses @samp{\(}, @samp{\)}.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{\(}.
+-
+-The alternation operator is @samp{\|}.
+-
+-The character @samp{^} only represents the beginning of a string when it appears:
+-@enumerate
+-
+-@item
+-At the beginning of a regular expression
+-
+-@item After an open-group, signified by
+-@samp{\(}
+-
+-@item After the alternation operator @samp{\|}
+-
+-@end enumerate
+-
+-
+-The character @samp{$} only represents the end of a string when it appears:
+-@enumerate
+-
+-@item At the end of a regular expression
+-
+-@item Before a close-group, signified by
+-@samp{\)}
+-@item Before the alternation operator @samp{\|}
+-
+-@end enumerate
+-
+-
+-@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
+-@enumerate
++Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{(}.
+ 
+-@item At the beginning of a regular expression
++The alternation operator is @samp{|}.
+ 
+-@item After an open-group, signified by
+-@samp{\(}
+-@item After the alternation operator @samp{\|}
++The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
+ 
+-@end enumerate
+ 
++The characters @samp{*}, @samp{+} and @samp{?} are special anywhere in a regular expression.
+ 
+ 
++Intervals are specified by @samp{@{} and @samp{@}}.
++Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node gnu-awk regular expression syntax
+-@subsection @samp{gnu-awk} regular expression syntax
++@node posix-extended regular expression syntax
++@subsection @samp{posix-extended} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character.
++The character @samp{.} matches any single character except the null character.
+ 
+ 
+ @table @samp
+@@ -328,7 +337,8 @@ matches a @samp{?}.
+ @end table
+ 
+ 
+-Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} can be used to quote the following character.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
++Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} is taken literally.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
++
+ 
+ GNU extensions are supported:
+ @enumerate
+@@ -358,42 +368,101 @@ The alternation operator is @samp{|}.
+ 
+ The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
+ 
+-@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
++
++@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except the following places, where they are not allowed:
+ @enumerate
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{(}
++@item After an open-group, signified by @samp{(}
++
+ @item After the alternation operator @samp{|}
+ 
+ @end enumerate
+ 
+ 
+-Intervals are specified by @samp{@{} and @samp{@}}.  Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
++Intervals are specified by @samp{@{} and @samp{@}}.
++Invalid intervals such as @samp{a@{1z} are not accepted.
++
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node grep regular expression syntax
+-@subsection @samp{grep} regular expression syntax
++@node awk regular expression syntax
++@subsection @samp{awk} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character.
++The character @samp{.} matches any single character except the null character.
+ 
+ 
+ @table @samp
+ 
+-@item \+
++@item +
+ indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
++@item ?
++indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
++@item \+
++matches a @samp{+}
+ @item \?
++matches a @samp{?}.
++@end table
++
++
++Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} can be used to quote the following character.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
++
++
++GNU extensions are not supported and so @samp{\w}, @samp{\W}, @samp{\<}, @samp{\>}, @samp{\b}, @samp{\B}, @samp{\`}, and @samp{\'} match @samp{w}, @samp{W}, @samp{<}, @samp{>}, @samp{b}, @samp{B}, @samp{`}, and @samp{'} respectively.
++
++
++Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit matches that digit.
++
++The alternation operator is @samp{|}.
++
++The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
++
++
++@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
++@enumerate
++
++@item At the beginning of a regular expression
++
++@item After an open-group, signified by @samp{(}
++
++@item After the alternation operator @samp{|}
++
++@end enumerate
++
++
++
++
++The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
++
++
++@node egrep regular expression syntax
++@subsection @samp{egrep} regular expression syntax
++This is a synonym for posix-egrep.
++@node emacs regular expression syntax
++@subsection @samp{emacs} regular expression syntax
++
++
++The character @samp{.} matches any single character except newline.
++
++
++@table @samp
++
++@item +
++indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
++@item ?
+ indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
+-@item + and ?
+-match themselves.
++@item \+
++matches a @samp{+}
++@item \?
++matches a @samp{?}.
+ @end table
+ 
+ 
+-Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} is taken literally.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
++Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are ignored.  Within square brackets, @samp{\} is taken literally.  Character classes are not supported, so for example you would need to use @samp{[0-9]} instead of @samp{[[:digit:]]}.
++
+ 
+ GNU extensions are supported:
+ @enumerate
+@@ -424,13 +493,10 @@ The alternation operator is @samp{\|}.
+ The character @samp{^} only represents the beginning of a string when it appears:
+ @enumerate
+ 
+-@item
+-At the beginning of a regular expression
++@item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{\(}
++@item After an open-group, signified by @samp{\(}
+ 
+-@item After a newline
+ 
+ @item After the alternation operator @samp{\|}
+ 
+@@ -442,39 +508,35 @@ The character @samp{$} only represents the end of a string when it appears:
+ 
+ @item At the end of a regular expression
+ 
+-@item Before a close-group, signified by
+-@samp{\)}
+-@item Before a newline
++@item Before a close-group, signified by @samp{\)}
+ 
+ @item Before the alternation operator @samp{\|}
+ 
+ @end enumerate
+ 
+ 
+-@samp{\*}, @samp{\+} and @samp{\?} are special at any point in a regular expression except:
++@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
+ @enumerate
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{\(}
+-@item After a newline
++@item After an open-group, signified by @samp{\(}
+ 
+ @item After the alternation operator @samp{\|}
+ 
+ @end enumerate
+ 
+ 
+-Intervals are specified by @samp{\@{} and @samp{\@}}.  Invalid intervals such as @samp{a\@{1z} are not accepted.
++
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node posix-awk regular expression syntax
+-@subsection @samp{posix-awk} regular expression syntax
++@node gnu-awk regular expression syntax
++@subsection @samp{gnu-awk} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character except the null character.
++The character @samp{.} matches any single character.
+ 
+ 
+ @table @samp
+@@ -492,7 +554,28 @@ matches a @samp{?}.
+ 
+ Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} can be used to quote the following character.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
+ 
+-GNU extensions are not supported and so @samp{\w}, @samp{\W}, @samp{\<}, @samp{\>}, @samp{\b}, @samp{\B}, @samp{\`}, and @samp{\'} match @samp{w}, @samp{W}, @samp{<}, @samp{>}, @samp{b}, @samp{B}, @samp{`}, and @samp{'} respectively.
++
++GNU extensions are supported:
++@enumerate
++
++@item @samp{\w} matches a character within a word
++
++@item @samp{\W} matches a character which is not within a word
++
++@item @samp{\<} matches the beginning of a word
++
++@item @samp{\>} matches the end of a word
++
++@item @samp{\b} matches a word boundary
++
++@item @samp{\B} matches characters which are not a word boundary
++
++@item @samp{\`} matches the beginning of the whole input
++
++@item @samp{\'} matches the end of the whole input
++
++@end enumerate
++
+ 
+ Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{(}.
+ 
+@@ -500,51 +583,47 @@ The alternation operator is @samp{|}.
+ 
+ The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
+ 
+-@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except the following places, where they are not allowed:
++
++@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except:
+ @enumerate
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{(}
++@item After an open-group, signified by @samp{(}
++
+ @item After the alternation operator @samp{|}
+ 
+ @end enumerate
+ 
+ 
+-Intervals are specified by @samp{@{} and @samp{@}}.  Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
++Intervals are specified by @samp{@{} and @samp{@}}.
++Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\@{1}
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+ 
+-@node posix-basic regular expression syntax
+-@subsection @samp{posix-basic} regular expression syntax
+-This is a synonym for ed.
+-@node posix-egrep regular expression syntax
+-@subsection @samp{posix-egrep} regular expression syntax
+-This is a synonym for egrep.
+-@node posix-extended regular expression syntax
+-@subsection @samp{posix-extended} regular expression syntax
++@node grep regular expression syntax
++@subsection @samp{grep} regular expression syntax
+ 
+ 
+-The character @samp{.} matches any single character except the null character.
++The character @samp{.} matches any single character.
+ 
+ 
+ @table @samp
+ 
+-@item +
+-indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
+-@item ?
+-indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
+ @item \+
+-matches a @samp{+}
++indicates that the regular expression should match one or more occurrences of the previous atom or regexp.
+ @item \?
+-matches a @samp{?}.
++indicates that the regular expression should match zero or one occurrence of the previous atom or regexp.
++@item + and ?
++match themselves.
++
+ @end table
+ 
+ 
+ Bracket expressions are used to match ranges of characters.  Bracket expressions where the range is backward, for example @samp{[z-a]}, are invalid.  Within square brackets, @samp{\} is taken literally.  Character classes are supported; for example @samp{[[:digit:]]} will match a single decimal digit.
+ 
++
+ GNU extensions are supported:
+ @enumerate
+ 
+@@ -567,25 +646,56 @@ GNU extensions are supported:
+ @end enumerate
+ 
+ 
+-Grouping is performed with parentheses @samp{()}.  An unmatched @samp{)} matches just itself.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{(}.
++Grouping is performed with backslashes followed by parentheses @samp{\(}, @samp{\)}.  A backslash followed by a digit acts as a back-reference and matches the same thing as the previous grouped expression indicated by that number.  For example @samp{\2} matches the second group expression.  The order of group expressions is determined by the position of their opening parenthesis @samp{\(}.
+ 
+-The alternation operator is @samp{|}.
++The alternation operator is @samp{\|}.
+ 
+-The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.
++The character @samp{^} only represents the beginning of a string when it appears:
++@enumerate
+ 
+-@samp{*}, @samp{+} and @samp{?} are special at any point in a regular expression except the following places, where they are not allowed:
++@item At the beginning of a regular expression
++
++@item After an open-group, signified by @samp{\(}
++
++
++@item After a newline
++
++@item After the alternation operator @samp{\|}
++
++@end enumerate
++
++
++The character @samp{$} only represents the end of a string when it appears:
++@enumerate
++
++@item At the end of a regular expression
++
++@item Before a close-group, signified by @samp{\)}
++
++@item Before a newline
++
++@item Before the alternation operator @samp{\|}
++
++@end enumerate
++
++
++@samp{\*}, @samp{\+} and @samp{\?} are special at any point in a regular expression except:
+ @enumerate
+ 
+ @item At the beginning of a regular expression
+ 
+-@item After an open-group, signified by
+-@samp{(}
+-@item After the alternation operator @samp{|}
++@item After an open-group, signified by @samp{\(}
++
++@item After a newline
++
++@item After the alternation operator @samp{\|}
+ 
+ @end enumerate
+ 
+ 
+-Intervals are specified by @samp{@{} and @samp{@}}.  Invalid intervals such as @samp{a@{1z} are not accepted.
++Intervals are specified by @samp{\@{} and @samp{\@}}.
++Invalid intervals such as @samp{a\@{1z} are not accepted.
++
+ 
+ The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.
+ 
+diff --git a/find/find.1 b/find/find.1
+index 06ddfa5b..8b1320c1 100644
+--- a/find/find.1
++++ b/find/find.1
+@@ -879,8 +879,8 @@ on the whole path, not a search.  For example, to match a file named
+ `./fubar3', you can use the regular expression `.*bar.' or `.*b.*3',
+ but not `f.*r3'.  The regular expressions understood by
+ .B find
+-are by default Emacs Regular Expressions, but this can be
+-changed with the
++are by default Emacs Regular Expressions (except that `.' matches
++newline), but this can be changed with the
+ .B \-regextype
+ option.
+ 
+diff --git a/lib/regexprops.c b/lib/regexprops.c
+index fcbdd5db..b20b4a38 100644
+--- a/lib/regexprops.c
++++ b/lib/regexprops.c
+@@ -78,8 +78,12 @@ directive (const char *s)
+ static void
+ comment (const char *s)
+ {
+-  directive ("@c ");
+-  literal (s);
++  directive ("@c");
++  if (s[0])
++    {
++      literal (" ");
++      literal (s);
++    }
+   newline ();
+ }
+ 
+@@ -175,7 +179,7 @@ describe_regex_syntax (int options)
+ 
+       content (" the null character");
+     }
+-  content (".  ");
++  content (".");
+   newpara ();
+ 
+   if (!(options & RE_LIMITED_OPS))
+@@ -185,25 +189,25 @@ describe_regex_syntax (int options)
+ 	{
+ 	  enum_item ("\\+");
+ 	  content ("indicates that the regular expression should match one"
+-		   " or more occurrences of the previous atom or regexp.  ");
++		   " or more occurrences of the previous atom or regexp.");
+ 	  enum_item ("\\?");
+ 	  content ("indicates that the regular expression should match zero"
+-		   " or one occurrence of the previous atom or regexp.  ");
+-	  enum_item ("+ and ? ");
+-	  content ("match themselves.  ");
++		   " or one occurrence of the previous atom or regexp.");
++	  enum_item ("+ and ?");
++	  content ("match themselves.\n");
+ 	}
+       else
+ 	{
+ 	  enum_item ("+");
+ 	  content ("indicates that the regular expression should match one"
+-		   " or more occurrences of the previous atom or regexp.  ");
++		   " or more occurrences of the previous atom or regexp.");
+ 	  enum_item ("?");
+ 	  content ("indicates that the regular expression should match zero"
+-		   " or one occurrence of the previous atom or regexp.  ");
++		   " or one occurrence of the previous atom or regexp.");
+ 	  enum_item ("\\+");
+ 	  literal ("matches a @samp{+}");
+ 	  enum_item ("\\?");
+-	  literal ("matches a @samp{?}.  ");
++	  literal ("matches a @samp{?}.");
+ 	}
+       endtable ();
+     }
+@@ -226,15 +230,15 @@ describe_regex_syntax (int options)
+ 
+   if (options & RE_CHAR_CLASSES)
+     content ("Character classes are supported; for example "
+-	     "@samp{[[:digit:]]} will match a single decimal digit.  ");
++	     "@samp{[[:digit:]]} will match a single decimal digit.\n");
+   else
+     literal ("Character classes are not supported, so for example "
+ 	     "you would need to use @samp{[0-9]} "
+-	     "instead of @samp{[[:digit:]]}.  ");
++	     "instead of @samp{[[:digit:]]}.\n");
+ 
+   if (options & RE_HAT_LISTS_NOT_NEWLINE)
+     {
+-      literal ("Non-matching lists @samp{[^@dots{}]} do not ever match newline.  ");
++      literal ("Non-matching lists @samp{[^@dots{}]} do not ever match newline.\n");
+     }
+   newpara ();
+   if (options & RE_NO_GNU_OPS)
+@@ -242,7 +246,7 @@ describe_regex_syntax (int options)
+       content ("GNU extensions are not supported and so "
+ 	       "@samp{\\w}, @samp{\\W}, @samp{\\<}, @samp{\\>}, @samp{\\b}, @samp{\\B}, @samp{\\`}, and @samp{\\'} "
+ 	       "match "
+-	       "@samp{w}, @samp{W}, @samp{<}, @samp{>}, @samp{b}, @samp{B}, @samp{`}, and @samp{'} respectively.  ");
++	       "@samp{w}, @samp{W}, @samp{<}, @samp{>}, @samp{b}, @samp{B}, @samp{`}, and @samp{'} respectively.\n");
+     }
+   else
+     {
+@@ -276,7 +280,7 @@ describe_regex_syntax (int options)
+ 
+   if (options & RE_NO_BK_REFS)
+     {
+-      content ("A backslash followed by a digit matches that digit.  ");
++      content ("A backslash followed by a digit matches that digit.");
+     }
+   else
+     {
+@@ -285,7 +289,7 @@ describe_regex_syntax (int options)
+ 	literal ("@samp{(}");
+       else
+ 	literal ("@samp{\\(}");
+-      content (".  ");
++      content (".");
+     }
+ 
+ 
+@@ -293,29 +297,28 @@ describe_regex_syntax (int options)
+   if (!(options & RE_LIMITED_OPS))
+     {
+       if (options & RE_NO_BK_VBAR)
+-	literal ("The alternation operator is @samp{|}.  ");
++	literal ("The alternation operator is @samp{|}.");
+       else
+-	literal ("The alternation operator is @samp{\\|}. ");
++	literal ("The alternation operator is @samp{\\|}.");
+     }
+   newpara ();
+ 
+   if (options & RE_CONTEXT_INDEP_ANCHORS)
+     {
+-      literal ("The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.  ");
++      literal ("The characters @samp{^} and @samp{$} always represent the beginning and end of a string respectively, except within square brackets.  Within brackets, @samp{^} can be used to invert the membership of the character class being specified.\n");
+     }
+   else
+     {
+       literal ("The character @samp{^} only represents the beginning of a string when it appears:");
+       beginenum ();
+-      enum_item ("\nAt the beginning of a regular expression");
+-      enum_item ("After an open-group, signified by ");
++      enum_item ("At the beginning of a regular expression");
+       if (options & RE_NO_BK_PARENS)
+ 	{
+-	  literal ("@samp{(}");
++	  enum_item ("After an open-group, signified by @samp{(}");
+ 	}
+       else
+ 	{
+-	  literal ("@samp{\\(}");
++	  enum_item ("After an open-group, signified by @samp{\\(}");
+ 	}
+       newline ();
+       if (!(options & RE_LIMITED_OPS))
+@@ -334,14 +337,13 @@ describe_regex_syntax (int options)
+       literal ("The character @samp{$} only represents the end of a string when it appears:");
+       beginenum ();
+       enum_item ("At the end of a regular expression");
+-      enum_item ("Before a close-group, signified by ");
+       if (options & RE_NO_BK_PARENS)
+ 	{
+-	  literal ("@samp{)}");
++	  enum_item ("Before a close-group, signified by @samp{)}");
+ 	}
+       else
+ 	{
+-	  literal ("@samp{\\)}");
++	  enum_item ("Before a close-group, signified by @samp{\\)}");
+ 	}
+       if (!(options & RE_LIMITED_OPS))
+ 	{
+@@ -361,7 +363,7 @@ describe_regex_syntax (int options)
+       if ((options & RE_CONTEXT_INDEP_OPS)
+ 	  && !(options & RE_CONTEXT_INVALID_OPS))
+ 	{
+-	  literal ("The characters @samp{*}, @samp{+} and @samp{?} are special anywhere in a regular expression.  ");
++	  literal ("The characters @samp{*}, @samp{+} and @samp{?} are special anywhere in a regular expression.\n");
+ 	}
+       else
+ 	{
+@@ -381,14 +383,13 @@ describe_regex_syntax (int options)
+ 
+ 	  beginenum ();
+ 	  enum_item ("At the beginning of a regular expression");
+-	  enum_item ("After an open-group, signified by ");
+ 	  if (options & RE_NO_BK_PARENS)
+ 	    {
+-	      literal ("@samp{(}");
++	      enum_item ("After an open-group, signified by @samp{(}");
+ 	    }
+ 	  else
+ 	    {
+-	      literal ("@samp{\\(}");
++	      enum_item ("After an open-group, signified by @samp{\\(}");
+ 	    }
+ 	  if (!(options & RE_LIMITED_OPS))
+ 	    {
+@@ -410,39 +411,38 @@ describe_regex_syntax (int options)
+     {
+       if (options & RE_NO_BK_BRACES)
+ 	{
+-	  literal ("Intervals are specified by @samp{@{} and @samp{@}}.  ");
++	  literal ("Intervals are specified by @samp{@{} and @samp{@}}.\n");
+ 	  if (options & RE_INVALID_INTERVAL_ORD)
+ 	    {
+ 	      literal ("Invalid intervals are treated as literals, for example @samp{a@{1} is treated as @samp{a\\@{1}");
+ 	    }
+ 	  else
+ 	    {
+-	      literal ("Invalid intervals such as @samp{a@{1z} are not accepted.  ");
++	      literal ("Invalid intervals such as @samp{a@{1z} are not accepted.\n");
+ 	    }
+ 	}
+       else
+ 	{
+-	  literal ("Intervals are specified by @samp{\\@{} and @samp{\\@}}.  ");
++	  literal ("Intervals are specified by @samp{\\@{} and @samp{\\@}}.\n");
+ 	  if (options & RE_INVALID_INTERVAL_ORD)
+ 	    {
+ 	      literal ("Invalid intervals are treated as literals, for example @samp{a\\@{1} is treated as @samp{a@{1}");
+ 	    }
+ 	  else
+ 	    {
+-	      literal ("Invalid intervals such as @samp{a\\@{1z} are not accepted.  ");
++	      literal ("Invalid intervals such as @samp{a\\@{1z} are not accepted.\n");
+ 	    }
+ 	}
+-
+     }
+ 
+   newpara ();
+   if (options & RE_NO_POSIX_BACKTRACKING)
+     {
+-      content ("Matching succeeds as soon as the whole pattern is matched, meaning that the result may not be the longest possible match.  ");
++      content ("Matching succeeds as soon as the whole pattern is matched, meaning that the result may not be the longest possible match.");
+     }
+   else
+     {
+-      content ("The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.  ");
++      content ("The longest possible match is returned; this applies to the regular expression as a whole and (subject to this constraint) to subexpressions within groups.");
+     }
+   newpara ();
+ }
+diff --git a/lib/regextype.c b/lib/regextype.c
+index 8a7347dc..89416ebd 100644
+--- a/lib/regextype.c
++++ b/lib/regextype.c
+@@ -56,17 +56,19 @@ struct tagRegexTypeMap
+ struct tagRegexTypeMap regex_map[] =
+   {
+    { "findutils-default",     CONTEXT_FINDUTILS, RE_SYNTAX_EMACS|RE_DOT_NEWLINE  },
++
++   { "posix-awk",             CONTEXT_ALL,       RE_SYNTAX_POSIX_AWK             },
++   { "posix-basic",           CONTEXT_ALL,       RE_SYNTAX_POSIX_BASIC           },
++   { "posix-egrep",           CONTEXT_ALL,       RE_SYNTAX_POSIX_EGREP           },
++   { "posix-extended",        CONTEXT_ALL,       RE_SYNTAX_POSIX_EXTENDED        },
++   { "posix-minimal-basic",   CONTEXT_GENERIC,   RE_SYNTAX_POSIX_MINIMAL_BASIC   },
++
+    { "awk",                   CONTEXT_ALL,       RE_SYNTAX_AWK                   },
+-   { "egrep",                 CONTEXT_ALL,       RE_SYNTAX_EGREP                 },
+    { "ed",                    CONTEXT_GENERIC,   RE_SYNTAX_ED                    },
++   { "egrep",                 CONTEXT_ALL,       RE_SYNTAX_EGREP                 },
+    { "emacs",                 CONTEXT_ALL,       RE_SYNTAX_EMACS                 },
+    { "gnu-awk",               CONTEXT_ALL,       RE_SYNTAX_GNU_AWK               },
+    { "grep",                  CONTEXT_ALL,       RE_SYNTAX_GREP                  },
+-   { "posix-awk",             CONTEXT_ALL,       RE_SYNTAX_POSIX_AWK             },
+-   { "posix-basic",           CONTEXT_ALL,       RE_SYNTAX_POSIX_BASIC           },
+-   { "posix-egrep",           CONTEXT_ALL,       RE_SYNTAX_POSIX_EGREP           },
+-   { "posix-extended",        CONTEXT_ALL,       RE_SYNTAX_POSIX_EXTENDED        },
+-   { "posix-minimal-basic",   CONTEXT_GENERIC,   RE_SYNTAX_POSIX_MINIMAL_BASIC    },
+    { "sed",                   CONTEXT_GENERIC,   RE_SYNTAX_SED                   },
+    /*    ,{ "posix-common",   CONTEXT_GENERIC,  _RE_SYNTAX_POSIX_COMMON   } */
+   };
+-- 
+2.19.1
+

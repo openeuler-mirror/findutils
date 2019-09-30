@@ -1,0 +1,45 @@
+From c1556892a639f609e6d63cd456c2062419e06459 Mon Sep 17 00:00:00 2001
+From: Goffredo Baroncelli <kreijack@inwind.it>
+Date: Fri, 27 Jan 2017 02:16:08 +0100
+Subject: [PATCH 090/224] find: fix memory leak in mount list handling
+
+The following gnulib commit added the structure member me_mntroot
+which our free_file_system_list function didn't consider, thus leading
+to a memory leak:
+http://git.sv.gnu.org/cgit/gnulib.git/commit/?id=c6148bca89e9
+
+* find/fstype.c (free_file_system_list): Use gnulib's free_mount_entry
+function to free the mount list instead of free()ing all members here
+manually.
+* NEWS (Bug Fixes): Mention the fix.
+
+Reported in
+http://lists.gnu.org/archive/html/findutils-patches/2016-12/msg00000.html
+---
+ NEWS          | 3 +++
+ find/fstype.c | 9 +--------
+ 2 files changed, 4 insertions(+), 8 deletions(-)
+
+diff --git a/find/fstype.c b/find/fstype.c
+index 535f9202..a0ac8bca 100644
+--- a/find/fstype.c
++++ b/find/fstype.c
+@@ -75,14 +75,7 @@ free_file_system_list (struct mount_entry *p)
+   while (p)
+     {
+       struct mount_entry *pnext = p->me_next;
+-
+-      free (p->me_devname);
+-      free (p->me_mountdir);
+-
+-      if (p->me_type_malloced)
+-	free (p->me_type);
+-      p->me_next = NULL;
+-      free (p);
++      free_mount_entry (p);
+       p = pnext;
+     }
+ }
+-- 
+2.19.1
+

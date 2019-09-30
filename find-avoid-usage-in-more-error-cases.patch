@@ -1,0 +1,43 @@
+From 50a7c5d1f572d50d6c9d43d04e9c9fd55d66b466 Mon Sep 17 00:00:00 2001
+From: Bernhard Voelker <mail@bernhard-voelker.de>
+Date: Thu, 10 Aug 2017 08:45:56 +0200
+Subject: [PATCH 113/224] find: avoid usage() in more error cases
+
+When the user passes a bad command line, then find(1) outputs the
+error message followed by a short usage() text, e.g. (wrapped):
+
+  $ find . -name a* b*
+  find: paths must precede expression: bfile
+  Usage: find [-H] [-L] [-P] [-Olevel] \
+  [-D help|tree|search|stat|rates|opt|exec] [path...] [expression]
+
+Omit the usage() text in more cases like this in order to make the
+error diagnostic more eye-catching.
+
+* find/tree.c (build_expression_tree): Exit with EXIT_FAILURE
+immediately in more cases, i.e., without outputting also a short
+usage() text.  While at it, add quotes around the offending argument
+in one another place.
+* NEWS (Improvements): Mention the fix.
+
+Reported in https://savannah.gnu.org/bugs/?51711
+---
+ NEWS        |  3 +++
+ find/tree.c | 17 +++++------------
+ 2 files changed, 8 insertions(+), 12 deletions(-)
+diff --git a/find/tree.c b/find/tree.c
+index 2bbfbe5a..ee466ea6 100644
+--- a/find/tree.c
++++ b/find/tree.c
+@@ -1281,10 +1281,7 @@
+     {
+       state.already_issued_stat_error_msg = false;
+       if (!looks_like_expression (argv[i], false))
+-	{
+-	  error (0, 0, _("paths must precede expression: %s"), argv[i]);
+-	  usage (stderr, 1, NULL);
+-	}
++	error (EXIT_FAILURE, 0, _("paths must precede expression: `%s'"), argv[i]);
+ 
+       predicate_name = argv[i];
+       parse_entry = find_parser (predicate_name);
