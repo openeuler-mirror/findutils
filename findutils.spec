@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.6.0
-Release: 3
+Release: 4
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -71,7 +71,7 @@ Patch6021: find-printf-Y-handle-ENOTDIR-also-as-broken-symlink.patch
 Patch6022: find-improve-warning-diagnostic-for-the-name-iname-w.patch
 Patch6023: find-make-pred_empty-safer-and-avoid-fd-leaks.patch
 
-Buildrequires: gcc autoconf
+Buildrequires: gcc autoconf gettext-devel texinfo
 
 Provides: /bin/find
 Provides: bundled(gnulib)
@@ -142,6 +142,12 @@ fi
 
 
 %changelog
+* Mon Oct 28 2019 shenyangyang <shenyangyang4@huawei.com> - 2:4.6.0-4
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:add build requires of texinfo and gettext-devel to slove the build problem
+
 * Tue Sep 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 2:4.6.0-3
 - Adjust requires
 
