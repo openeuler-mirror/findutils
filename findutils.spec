@@ -1,13 +1,11 @@
 Name: findutils
 Epoch: 2
 Version: 4.7.0
-Release: 1
+Release: 2
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
 Source0: https://ftp.gnu.org/pub/gnu/findutils/%{name}-%{version}.tar.xz
-
-Patch:  findutils-4.4.2-xautofs.patch
 
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu
 
@@ -88,6 +86,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Tue Jan 7 2020 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-2
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:delete redundant file
+
 * Tue Dec 31 2019 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-1
 - Type:enhancement
 - ID:NA
