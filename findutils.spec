@@ -1,11 +1,18 @@
 Name: findutils
 Epoch: 2
 Version: 4.7.0
-Release: 3 
+Release: 4
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
 Source0: https://ftp.gnu.org/pub/gnu/findutils/%{name}-%{version}.tar.xz
+
+# resolve test failures when ran as root
+# https://savannah.gnu.org/bugs/?57762
+Patch0:        0001-tests-avoid-FP-when-run-as-root.patch
+Patch1:        0001-findutils-xautofs.patch
+# rhbz #1252549 #1299169
+Patch2:        0001-findutils-leaf-opt.patch
 
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
@@ -41,7 +48,7 @@ autoreconf -fiv
 %make_build
 
 %check
-#make check
+make check
 
 %install
 %make_install
@@ -86,6 +93,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Tue Feb 11 2020 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-4
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:Fix test failures ran as root and enable -xautofs and disable leaf opt
+
 * Wed Jan 22 2020 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-3
 - Type:enhancement
 - ID:NA

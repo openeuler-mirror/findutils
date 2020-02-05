@@ -1,0 +1,75 @@
+From 79962cf9eecbf5e67e195f48aa5ab890fbed9250 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Thu, 13 Feb 2020 09:59:09 +0800
+Subject: [PATCH] findutils leaf opt
+
+This reverts commit dce8759f0f0236a860a3e68b63c5e99cc6f168f9.
+---
+ find/ftsfind.c |  3 +++
+ gl/lib/fts.c   |  4 ++++
+ gl/lib/fts_.h  | 16 ++++++++++++----
+ 3 files changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/find/ftsfind.c b/find/ftsfind.c
+index 69a3d8d..d207f90 100644
+--- a/find/ftsfind.c
++++ b/find/ftsfind.c
+@@ -553,6 +553,9 @@ find (char *arg)
+   if (options.stay_on_filesystem)
+     ftsoptions |= FTS_XDEV;
+ 
++  if (options.no_leaf_check)
++    ftsoptions |= FTS_NOLEAF;
++
+   p = fts_open (arglist, ftsoptions, NULL);
+   if (NULL == p)
+     {
+diff --git a/gl/lib/fts.c b/gl/lib/fts.c
+index 8b7a4de..1093ce5 100644
+--- a/gl/lib/fts.c
++++ b/gl/lib/fts.c
+@@ -713,6 +713,10 @@ filesystem_type (FTSENT const *p, int fd)
+   struct dev_type *ent;
+   struct statfs fs_buf;
+ 
++  if (ISSET(FTS_NOLEAF))
++    /* leaf optimization explicitly disabled by the FTS_NOLEAF flag */
++    return 0;
++
+   /* If we're not in CWDFD mode, don't bother with this optimization,
+      since the caller is not serious about performance.  */
+   if (!ISSET (FTS_CWDFD))
+diff --git a/gl/lib/fts_.h b/gl/lib/fts_.h
+index fb5558f..d40a116 100644
+--- a/gl/lib/fts_.h
++++ b/gl/lib/fts_.h
+@@ -149,14 +149,22 @@ typedef struct {
+      dirent.d_type data.  */
+ # define FTS_DEFER_STAT         0x0400
+ 
++/* 0x0800 unused, was non-working FTS_NOATIME */
++
+   /* Use this flag to disable stripping of trailing slashes
+      from input path names during fts_open initialization.  */
+-# define FTS_VERBATIM   0x0800
++# define FTS_VERBATIM   0x1000
++
++  /* Disable leaf optimization (which eliminates stat() calls during traversal,
++     based on the count of nested directories stored in stat.st_nlink of each
++     directory).  Note that the optimization is by default enabled only for
++     selected file systems, and only if the FTS_CWDFD flag is set.  */
++# define FTS_NOLEAF     0x2000
+ 
+-# define FTS_OPTIONMASK 0x0fff          /* valid user option mask */
++# define FTS_OPTIONMASK 0x3fff          /* valid user option mask */
+ 
+-# define FTS_NAMEONLY   0x1000          /* (private) child names only */
+-# define FTS_STOP       0x2000          /* (private) unrecoverable error */
++# define FTS_NAMEONLY   0x4000          /* (private) child names only */
++# define FTS_STOP       0x8000          /* (private) unrecoverable error */
+         int fts_options;                /* fts_open options, global flags */
+ 
+         /* Map a directory's device number to a boolean.  The boolean is
+-- 
+1.8.3.1
+
