@@ -1,0 +1,11 @@
+diff -Nur findutils-4.7.0.old/gl/lib/fts.c findutils-4.7.0/gl/lib/fts.c
+--- findutils-4.7.0.old/gl/lib/fts.c	2020-04-10 15:42:01.861626687 +0800
++++ findutils-4.7.0/gl/lib/fts.c	2020-04-10 15:42:33.482245911 +0800
+@@ -800,7 +800,6 @@
+       /* List here the file system types that may lack usable dirent.d_type
+          info, yet for which the optimization does apply.  */
+     case S_MAGIC_REISERFS:
+-    case S_MAGIC_XFS: /* XFS lacked it until 2013-08-22 commit.  */
+       return NOSTAT_LEAF_OPTIMIZATION;
+ 
+     case 0:
