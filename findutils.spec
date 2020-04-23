@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.7.0
-Release: 5
+Release: 6
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -14,6 +14,7 @@ Patch1:        0001-findutils-xautofs.patch
 # rhbz #1252549 #1299169
 Patch2:        0001-findutils-leaf-opt.patch
 Patch3:	       0001-remove-S_MAGIC_XFS-fix-coredump.patch
+Patch4:        0004-fts-remove-NOSTAT_LEAF_OPTIMIZATION.patch 
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
 Requires(post): info
@@ -93,6 +94,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Thu Apr 23 2020 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-6
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:revert remove S_MAGIC_XFS and remove NOSTAT_LEAF_OPTIMIZATION to fix coredump
+
 * Fri Apr 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 2:4.7.0-5
 - Type:bugfix
 - ID:NA
