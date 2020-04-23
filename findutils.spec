@@ -13,8 +13,7 @@ Patch0:        0001-tests-avoid-FP-when-run-as-root.patch
 Patch1:        0001-findutils-xautofs.patch
 # rhbz #1252549 #1299169
 Patch2:        0001-findutils-leaf-opt.patch
-Patch3:	       0001-remove-S_MAGIC_XFS-fix-coredump.patch
-Patch4:        0004-fts-remove-NOSTAT_LEAF_OPTIMIZATION.patch 
+Patch3:        0004-fts-remove-NOSTAT_LEAF_OPTIMIZATION.patch 
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
 Requires(post): info
