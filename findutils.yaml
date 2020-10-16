@@ -1,0 +1,5 @@
+git_url: https://git.savannah.gnu.org/git/findutils.git
+version_control: git
+src_repo: https://git.savannah.gnu.org/git/findutils.git
+tag_prefix: ^v
+seperator: .
