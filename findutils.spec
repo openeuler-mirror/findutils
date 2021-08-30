@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
-Version: 4.7.0
-Release: 7
+Version: 4.8.0
+Release: 1
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -9,11 +9,9 @@ Source0: https://ftp.gnu.org/pub/gnu/findutils/%{name}-%{version}.tar.xz
 
 # resolve test failures when ran as root
 # https://savannah.gnu.org/bugs/?57762
-Patch0:        0001-tests-avoid-FP-when-run-as-root.patch
 Patch1:        0001-findutils-xautofs.patch
 # rhbz #1252549 #1299169
 Patch2:        0001-findutils-leaf-opt.patch
-Patch3:        0004-fts-remove-NOSTAT_LEAF_OPTIMIZATION.patch 
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
 Requires(post): info
@@ -96,6 +94,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Mon Aug 30 2021 shixuantong <shixuantong@huawei.com> - 2:4.8.0-1
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:update version to 4.8.0
+
 * Fri Mar 19 2021 shixuantong <shixuantong@huawei.com> - 2:4.7.0-7
 - Type:bugfix
 - ID:NA
