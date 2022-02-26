@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.8.0
-Release: 2
+Release: 3
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -41,14 +41,14 @@ xargs - build and execute command lines from standard input
 autoreconf -fiv
 
 %build
+%ifarch aarch64
+CFLAGS="$RPM_OPT_FLAGS -fsigned-char"
+%endif
 %configure
 
 %make_build
 
 %check
-%ifarch aarch64
-CFLAGS="$RPM_OPT_FLAGS -fsigned-char"
-%endif
 make check
 
 %install
@@ -94,6 +94,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Sat Feb 26 2022 shixuantong <shixuantong@h-partners.com> - 2:4.8.0-3
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix test_localeconv fail in aarch64 machine
+
 * Tue Dec 21 2021 shixuantong <shixuantong@huawei.com> - 2:4.8.0-2
 - Type:bugfix
 - ID:NA
