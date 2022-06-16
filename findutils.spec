@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.8.0
-Release: 3
+Release: 4
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -12,7 +12,7 @@ Source0: https://ftp.gnu.org/pub/gnu/findutils/%{name}-%{version}.tar.xz
 Patch1:        0001-findutils-xautofs.patch
 # rhbz #1252549 #1299169
 Patch2:        0001-findutils-leaf-opt.patch
-Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
+Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake 
 
 Requires(post): info
 Requires(preun):info
@@ -94,6 +94,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Thu Jun 16 2022 tanyulong <tanyulong@kylinos.cn> - 2:4.8.0-4
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:Delete unnecessary gdb from BuildRequires
+
 * Sat Feb 26 2022 shixuantong <shixuantong@h-partners.com> - 2:4.8.0-3
 - Type:bugfix
 - ID:NA
