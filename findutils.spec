@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
-Version: 4.8.0
-Release: 4
+Version: 4.9.0
+Release: 1
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -94,6 +94,9 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Tue Oct 18 2022 dillon chen <dillon.chen@gmail.com> - 4.9.0-1
+- update to 4.9.0
+
 * Thu Jun 16 2022 tanyulong <tanyulong@kylinos.cn> - 2:4.8.0-4
 - Type:enhancement
 - ID:NA
