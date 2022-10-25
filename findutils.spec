@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.8.0
-Release: 3
+Release: 4
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -9,9 +9,10 @@ Source0: https://ftp.gnu.org/pub/gnu/findutils/%{name}-%{version}.tar.xz
 
 # resolve test failures when ran as root
 # https://savannah.gnu.org/bugs/?57762
-Patch1:        0001-findutils-xautofs.patch
+Patch1:        backport-findutils-xautofs.patch
 # rhbz #1252549 #1299169
-Patch2:        0001-findutils-leaf-opt.patch
+Patch2:        backport-findutils-leaf-opt.patch
+Patch3:        backport-maint-fix-typo-in-comments-in-parser.c.patch
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
 Requires(post): info
@@ -94,6 +95,12 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Tue Oct 25 2022 zhoushuiqing <zhoushuiqing2@huawei.com> - 2:4.8.0-4
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix typo in comments in parser.c
+
 * Sat Feb 26 2022 shixuantong <shixuantong@h-partners.com> - 2:4.8.0-3
 - Type:bugfix
 - ID:NA
