@@ -13,6 +13,10 @@ Patch1:        backport-findutils-xautofs.patch
 # rhbz #1252549 #1299169
 Patch2:        backport-findutils-leaf-opt.patch
 Patch3:        backport-maint-fix-typo-in-comments-in-parser.c.patch
+%ifarch sw_64
+Patch4:        findutils-4.8.0-sw.patch
+%endif
+
 Buildrequires: gcc autoconf gettext-devel texinfo libselinux-devel dejagnu automake gdb
 
 Requires(post): info

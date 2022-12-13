@@ -1,0 +1,32 @@
+diff -Nuar findutils-4.8.0.org/configure findutils-4.8.0.sw/configure
+--- findutils-4.8.0.org/configure	2022-02-14 07:11:40.370000000 +0000
++++ findutils-4.8.0.sw/configure	2022-02-14 07:15:18.850000000 +0000
+@@ -7431,6 +7431,12 @@
+   # (according to the test results of Bruno Haible's ieeefp/fenv_default.m4
+   # and the GCC 4.1.2 manual).
+   case "$host_cpu" in
++    sw_64*)
++      if test -n "$GCC"; then
++        # GCC has the option -mieee.
++        CPPFLAGS="$CPPFLAGS -mieee"
++      fi
++      ;;
+     alpha*)
+       # On Alpha systems, a compiler option provides the behaviour.
+       # See the ieee(3) manual page, also available at
+diff -Nuar findutils-4.8.0.org/gl/m4/fpieee.m4 findutils-4.8.0.sw/gl/m4/fpieee.m4
+--- findutils-4.8.0.org/gl/m4/fpieee.m4	2022-02-14 07:11:40.460000000 +0000
++++ findutils-4.8.0.sw/gl/m4/fpieee.m4	2022-02-14 07:18:13.770000000 +0000
+@@ -30,6 +30,12 @@
+   # (according to the test results of Bruno Haible's ieeefp/fenv_default.m4
+   # and the GCC 4.1.2 manual).
+   case "$host_cpu" in
++    sw_64*)
++      if test -n "$GCC"; then
++        # GCC has the option -mieee.
++        CPPFLAGS="$CPPFLAGS -mieee"
++      fi
++      ;;
+     alpha*)
+       # On Alpha systems, a compiler option provides the behaviour.
+       # See the ieee(3) manual page, also available at
