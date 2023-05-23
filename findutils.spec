@@ -1,7 +1,7 @@
 Name: findutils
 Epoch: 2
 Version: 4.9.0
-Release: 1
+Release: 2
 Summary: The GNU Find Utilities
 License: GPLv3+
 URL: http://www.gnu.org/software/findutils/
@@ -41,7 +41,7 @@ xargs - build and execute command lines from standard input
 autoreconf -fiv
 
 %build
-%ifarch aarch64
+%ifarch aarch64 riscv64
 CFLAGS="$RPM_OPT_FLAGS -fsigned-char"
 %endif
 %configure
@@ -94,6 +94,9 @@ fi
 %exclude %{_mandir}/man5/locatedb.5*
 
 %changelog
+* Tue May 23 2023 yoo <sunyuechi@iscas.ac.cn> - 4.9.0-2
+- add riscv support
+
 * Tue Oct 18 2022 dillon chen <dillon.chen@gmail.com> - 4.9.0-1
 - update to 4.9.0
 
